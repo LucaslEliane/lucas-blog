@@ -12,32 +12,32 @@ const readFile = function(filename) {
   })
 }
 
-readFile('readme').then(function(data) {
-  return readFile(data.toString());
-}, function(err) {
-  return Promise.reject(err.toString());
-}).then(function(data) {
-  console.log(data.toString());
-}, function(err) {
-  console.log(err);
-});
+// readFile('readme').then(function(data) {
+//   return readFile(data.toString());
+// }, function(err) {
+//   return Promise.reject(err.toString());
+// }).then(function(data) {
+//   console.log(data.toString());
+// }, function(err) {
+//   console.log(err);
+// });
 
 
-// const as = async function(filename) {
-//   const f1 = await readFile(filename + 'a').catch(function(err) {
-//     console.error(`there is something error occurring reading file ${err}`);
-//     return false;
-//   });
-//   const f2 = await readFile(filename).catch(function(err) {
-//     console.error(`there is something error occurring reading file ${err}`);
-//     return false;
-//   });
-//   console.log(f1.toString('utf-8'));
-//   console.log(f2.toString('utf-8'));
-// }
+const as = async function(filename) {
+  const f1 = await readFile(filename).catch(function(err) {
+    console.error(`there is something error occurring reading file ${err}`);
+    return false;
+  });
+  const f2 = await readFile(filename).catch(function(err) {
+    console.error(`there is something error occurring reading file ${err}`);
+    return false;
+  });
+  console.log(f1.toString('utf-8'));
+  console.log(f2.toString('utf-8'));
+}
 
-// as('./readme');
-// console.log('this is a piece sync code');
+as('./readme');
+console.log('this is a piece sync code');
 
 // const gen = function *(filename) {
 //   console.log(filename);
@@ -47,19 +47,22 @@ readFile('readme').then(function(data) {
 //   console.log(f2.toString('utf-8'));
 // }
 
-// const generator = gen('./readme');
-// const result1 = generator.next();
-// result1.value.then(function(data) {
-//   return data;
+// const g = gen('./readme');
+// console.log(g.next());
+// console.log(g.next());
+// console.log(g.next());
+
+// const g = gen('./readme');
+// g.next().value.then(function(data) {
+//   return data.toString('utf-8');
 // }, function(err) {
 //   console.log(err);
 // }).then(function(data) {
-//   const result2 = generator.next(data);
-//   result2.value.then(function(data) {
-//     return data;
+//   g.next(data).value.then(function(data) {
+//     return data.toString('utf-8');
 //   }, function(err) {
 //     console.log(err);
 //   }).then(function(data) {
-//     generator.next(data);
+//     g.next(data);
 //   });
 // });
