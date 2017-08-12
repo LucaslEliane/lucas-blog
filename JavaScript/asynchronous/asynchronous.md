@@ -51,6 +51,145 @@ readFile('readme').then(function(data) {
 // 这样就实现了两个需要顺序进行的异步操作的顺序保证
 ```
 
+#### Promise的一些方法
+
+Promise和一些polyfill，都实现了一些封装的方法，来实现对于`Promise`快速的流程处理。
+
+`Promise.resolve`和`Promise.reject`可以直接实现一个resolve的或者reject的Promise。
+
+`Promise.all()`必须要参数所有的`Promise`resolve了，状态才会变为resolve。
+
+`Promise.race()`是当第一个`Promise`fulfilled或者是rejected发生了之后，传递到`then`里面。类似于一个竞争的关系。
+
+#### `Promise.resolve`和`Promise.reject`
+
+对于`Promise.resolve`来说，如果参数不同，方法实现的效果都是不同的。
+
+如果参数是一个字面量，那么会返回一个resolve的`Promise`对象。
+
+如果参数是一个`Promise`或者thenable对象的话，那么会将其转换为一个`Promise`，或者产生一个`Promise`的复制。
+
+*但是不会影响当前`Promise`的执行状态。*
+
+```Javascript
+const readFile = function(filename) {
+  return new Promise(function(resolve, reject) {
+    fs.readFile(filename, function(err, data) {
+      if (err) {
+        console.log('the promise had been rejected!');
+        reject(err.toString());
+      } else {
+        console.log('the promise has been resolved!');
+        resolve(data.toString());
+      }
+    });
+  });
+}
+// 该文件不存在的话
+Promise.resolve(readFile('./readme'))
+.then(function(data) {
+  console.log('this is resolve callback function!');
+  console.log(data);
+}, function(err) {
+  console.log('this is reject callback function!');
+  console.error(err);
+});
+// the promise had been rejected!
+// this is reject callback function!
+// Error: ENOENT: no such file or directory, open './readmea'
+```
+
+而`Promise.reject`在使用的时候，就不像`Promise.resolve`那么多的作用了。对于其传入一个字面量，会返回一个reject状态的`Promise`。而参数是一个失败的原因。*主要可以用来进行Promise失败的测试*。
+
+#### `Promise.all`
+
+这个方法可以传递很多的`Promise`进去，当所有`Promise`都变成fulfill状态的话，那么生成的这个新的`Promise`才会是fulfill状态，否则是reject状态。
+
+这个`Promise.all`主要用在于几个异步操作需要结合使用的时候，需要几个`Promise`均完成，才能够执行后面的同步操作，这个方法可以返回一个新的`Promise`。
+
+该函数的参数是一个thenable对象的数组，中间可以通过`Promise.resolve`或者`Promise.reject`来将直接量转换为`Promise`对象。
+
+```javascript
+Promise.all([
+  readFile('./readme'),
+  readFile('./nextFile'),
+  readFile('./lastFile')
+]).then(function(data) {
+  console.log(data[0] + data[1] + data[2]);
+}, function(err) {
+  console.error(err);
+});
+```
+
+#### `Promise.race`
+
+这个方法也是传递一个可迭代的变量到参数中，迭代的结果应该是一些thenable对象。
+
+这个方法可以用于类似同时请求多个服务器，当第一个服务器返回了一个结果之后，就抛弃其他所有的请求结果，这样可以在请求的时候增加一些容错机制。
+
+```javascript
+// server.js
+const http = require('http');
+const server = http.createServer(function(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  if (req.url === '/') {
+    res.statusCode = 200;
+    res.end('/ request OK');
+  } else {
+    setTimeout(function() {
+      res.status = 500;
+      res.end('other request error');
+    }, 2000);
+  }
+});
+server.listen(9999);
+// app.js
+const ajaxPromise = function(url) {
+  const xmlHttp = new XMLHttpRequest();
+  return new Promise(function(resolve, reject) {
+    xmlHttp.open('GET', url);
+    xmlHttp.onreadystatechange = function() {
+      if (xmlHttp.readyState === 4) {
+        if (xmlHttp.status === 200) {
+          resolve(xmlHttp.responseText);
+        } else {
+          reject(xmlHttp.responseText);
+        }
+      }
+    }
+  });
+}
+Promise.race([
+  ajaxPromise('http://localhost:9999/'),
+  ajaxPromise('http://localhost:9999/index'),
+  ajaxPromise('http://localhost:9999/user')
+]).then(function(data) {
+  console.log(data);
+}, function(err) {
+  console.error(err);
+});
+```
+
+这里由于在服务端对于除了根目录的其他的请求都进行了延迟。所以所有的`Promise`的请求结果永远都是请求根目录的结果。
+
+#### `Promise.prototype.catch`
+
+用于对于错误的统一处理，当一个`Promise`链式调用的时候，将这个方法挂在最后，这个方法可以对整个链式调用过程中的任何一个`Promise`产生的reject进行统一处理。
+
+```javascript
+readFile('./readme').then(function(data) {
+  return data;
+}).then(function(data) {
+  return readFile(data).then(function(data) {
+    console.log(data);
+  });
+}).catch(function(err) {
+  console.error(err);
+});
+```
+
+上面的代码有两个链式的`Promise`，这里无论第一个`Promise`还是第二个产生了一个reject，`catch`块都会对其进行处理，而不需要额外的reject处理函数，只有两个`Promise`均fulfilled的时候，这个语句块就不会进行执行了。
+
 ### generator
 
 生成器是基于ES6的迭代器概念的一种函数，这个函数可以被暂停执行，来方便实现异步代码。

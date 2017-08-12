@@ -11,7 +11,6 @@ const readFile = function(filename) {
     })
   })
 }
-
 // readFile('readme').then(function(data) {
 //   return readFile(data.toString());
 // }, function(err) {
