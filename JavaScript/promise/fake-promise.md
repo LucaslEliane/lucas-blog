@@ -191,7 +191,9 @@ const callback = function() {
 
 ### 结论
 
-具体的代码可以参见我的github中的[fake-promise]()。
+具体的代码可以参见我的github中的[fake-promise](https://github.com/LucaslEliane/lucas-blog/blob/master/JavaScript/asynchronous/async/fake-promise.js)。
+
+这个依赖收集的方法在很多项目的源代码中都有使用过，比如Vue、RequireJS等，[RequireJS的实现也可以看这里](https://github.com/LucaslEliane/simple-require)
 
 这里有几个重点，其实在调用then方法的时候，只是依赖添加的过程，并不是执行两个回调函数。
 

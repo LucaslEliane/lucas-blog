@@ -183,3 +183,35 @@ CORS全称跨域资源共享，可以允许浏览器向跨域服务器发出AJAX
 ##### CORS和JSONP的比较
 
 CORS可以针对所有的请求方法来进行AJAX跨域请求修复，而JSONP所有的请求最终都是通过GET方法实现的，局限性太大。但是CORS需要比较新的浏览器支持，基本上已经放弃了IE10以下的版本，所以如果需要对旧版浏览器兼容的话，就需要使用JSONP来进行hack。
+
+##### document.domain
+
+`document.domain`这个属性用来表示下载当前文档的服务器域名。
+
+为了防止有些人为了窃取页面数据，所以这个属性只能够修改成和当前文档域名相同的基础域名，也就是如果当域名的基础域名部分不相同的时候，是不能够使用修改这个属性的方法来跨域子域的。
+
+也就是在主域相同的情况下，可以将`document.domain`设置成当前域名的父级目录。
+
+比如将`"www.example.com/a.html"`切换成`"www.example.com/b.html"`。
+
+这样跨域的方法一般是用在获取其他窗口的内容的，这个方法和AJAX的跨域没有什么关系。比如在一个文档里面嵌入一个`<iframe>`标签，根文档和iframe文档属于相同基础域名内部的不同子域，这样也会导致出现跨域限制，也就是根文档并不能够访问iframe标签的内部信息。为了可以进行访问，将根文档的`document.domain`设置为比较高级的域，就可以访问iframe标签里面的内容了。
+
+##### window.postMessage
+
+这个是HTML5中加入的一个窗口通信的方法，这个方法可以用于窗口之间的通信，这个方法可以不会被浏览器同源策略所限制，也就是无论是否同源都可以进行window的通信。
+
+但是这个方法必须要在两个页面中都设置对应的方法或者接受函数来进行通信。
+
+```
+// the window
+window.onload = function() {
+  window.frames[0].postMessage('getcolor', 'httpL//lslib.com');
+}
+// the other window
+window.addEventListener('message', function(e) {
+  var color = document.body.style.backgroundColor
+  window.parent.postMessage(color, '*');
+})
+```
+
+这个方法其实也是用来进行根窗口和子窗口进行通信的。也不算是AJAX跨域的一个方法。

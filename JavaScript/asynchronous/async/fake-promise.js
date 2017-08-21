@@ -47,6 +47,9 @@ var FPromise = (function() {
     const self = this;
     return FPromise(function(resolve, reject) {
       const callback = function() {
+        if (!onFulfilled) {
+          return;
+        }
         const resolveValue = onFulfilled(self[promiseValueSymbol]);
         // 这里是对于当返回值是一个thenable对象的时候，
         // 需要对其进行特殊处理，直接调用它的then方法来
@@ -66,15 +69,18 @@ var FPromise = (function() {
         }
       }
       const errCallback = function() {
+        if (!onRejected) {
+          return;
+        }
         const rejectValue = onRejected(self[promiseValueSymbol]);
         // 这里是和上面是一致的
         reject(rejectValue);
       }
       // 这里是对当前Promise状态的处理，如果上一个Promise在执行then方法之前就已经
       // 完成了，那么下一个Promise对应的回调应该直接执行
-      if (self[promiseStatusSymbol] === STATUS.FULFILLED) {
+      if (onFulfilled && self[promiseStatusSymbol] === STATUS.FULFILLED) {
         return callback();
-      } else if (self[promiseStatusSymbol] === STATUS.REJECTED) {
+      } else if (onRejected && self[promiseStatusSymbol] === STATUS.REJECTED) {
         return errCallback();
       } else if (self[promiseStatusSymbol] === STATUS.PENDING) {
         self.deps.resolver = callback;
@@ -83,29 +89,129 @@ var FPromise = (function() {
     })
   }
   FPromise.resolve = function(obj) {
-    if (obj && typeof obj === 'function') {
-
+    if (obj && typeof obj.then === 'function') {
+      return FPromise(function(resolve, reject) {
+        obj.then(function(data) {
+          resolve(data);
+        }, function(err) {
+          reject(err);
+        });
+      });
+    } else {
+      return FPromise(function(resolve, reject) {
+        resolve(obj);
+      });
     }
   }
-
+  FPromise.reject = function(obj) {
+    return FPromise(function(resolve, reject) {
+      reject(obj);
+    });
+  }
+  FPromise.all = function(promiseArray) {
+    if (Object.prototype.toString.call(promiseArray) !== '[object Array]') {
+      throw new TypeError('FPromise.all() need an array parameter');
+    }
+    return FPromise(function(resolve, reject) {
+      const promises = promiseArray;
+      const results = [];
+      let count = promises.length;
+      const resolver = function(index) {
+        return function(value) {
+          resolveAll(index, value);
+        }
+      };
+      const rejecter = function(err) {
+        reject(err);
+      }
+      const resolveAll = function(index, value) {
+        results[index] = value;
+        if (--count === 0) {
+          resolve(results);
+        }
+      }
+      for (var i = 0; i < count; i++) {
+        promises[i].then(
+          resolver(i),
+          rejecter
+        )
+      }
+    });
+  }
+  FPromise.race = function(promiseArray) {
+    if (Object.prototype.toString.call(promiseArray) !== '[object Array]') {
+      throw new TypeError('FPromise.race() need an array parameter');
+    }
+    return FPromise(function(resolve, reject) {
+      for (var i = 0; i < promiseArray.length; i++) {
+        promiseArray[i].then(
+          resolve,
+          reject
+        )
+      }
+    });
+  }
+  FPromise.prototype.catch = function(rejecter) {
+    return this.then(undefined, rejecter);
+  }
   return FPromise;
 })();
 
 const fs = require('fs');
 
 var p1 = new FPromise(function(resolve, reject){
-  fs.readFile('./readme', function(err, data) {
+  fs.readFile('./readmea', function(err, data) {
     if (err) {
       reject(err.toString());
     } else {
       resolve(data.toString());
     }
   });
-}).then(function(data) {
-  console.log(data);
-  return data;
-}, function(err) {
+}).catch(function(err) {
   console.log(err);
-}).then(function(data) {
-  console.log(data);
 })
+
+
+// var p1 = FPromise.resolve({
+//   then: function(onFulfilled, onRejected) {
+//     onFulfilled(123);
+//   }
+// }).then(function(data) {
+//   console.log(data);
+// })
+
+// var p1 = FPromise.all([
+//   new FPromise(function(resolve, reject) {
+//     fs.readFile('./readmea', function(err, data) {
+//       if (err) {
+//         reject(err.toString());
+//       } else {
+//         resolve(data.toString());
+//       }
+//     });
+//   }),
+//   FPromise.resolve(123)
+// ]).then(function(data) {
+//   console.log(data);
+// }, function(err) {
+//   console.log(err);
+// })
+
+// var p1 = FPromise.all(123);
+
+// var p1 = FPromise.race([
+//   new FPromise(function(resolve, reject) {
+//     fs.readFile('./readmea', function(err, data) {
+//       if (err) {
+//         reject(err.toString());
+//       } else {
+//         resolve(data.toString());
+//       }
+//     });
+//   }),
+//   FPromise.resolve(123)
+// ]).then(function(data) {
+//   console.log(data);
+// }, function(err) {
+//   console.log(err);
+// })
